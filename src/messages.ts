@@ -56,7 +56,7 @@ export namespace Messages {
             }
 
             let view = new Uint8Array(arr);
-            return  view.buffer;
+            return view.buffer;
         }
 
         get data(): ArrayBuffer {
@@ -73,7 +73,7 @@ export namespace Messages {
             let messageHeader = new Uint8Array(arr);
             let messageBody = new Uint8Array(this.payload);
             let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(messageHeader, messageBody);
-            return fullMessage;
+            return fullMessage.buffer;
         }
     }
 
