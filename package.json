@@ -1,0 +1,35 @@
+{
+  "name": "torrent-streamer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "tsc": "tsc -p -w ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^13.0.1",
+    "del": "^2.2.1",
+    "gulp": "^3.9.1",
+    "gulp-shell": "^0.5.2",
+    "jasmine-core": "2.4.1",
+    "karma": "^1.1.0",
+    "karma-chrome-launcher": "^1.0.1",
+    "karma-html-detailed-reporter": "^1.1.8",
+    "karma-jasmine": "^1.0.2",
+    "karma-phantomjs-launcher": "^1.0.1",
+    "karma-requirejs": "^1.0.0",
+    "phantomjs": "^2.1.7",
+    "requirejs": "^2.2.0",
+    "run-sequence": "^1.2.2",
+    "tsify": "^0.16.0",
+    "tslint": "^3.13.0"
+  },
+  "dependencies": {
+    "crypto-js": "^3.1.6",
+    "es6-promise": "^3.2.1",
+    "require": "^2.4.20",
+    "webrtc-adapter": "^1.4.0"
+  }
+}

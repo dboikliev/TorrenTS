@@ -1,0 +1,17 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.DS_Store": true,
+        // "**/*.js" : { "when" : "$(basename).ts" },
+        "**/*.js.map" : true,
+        "node_modules" : true,
+        ".vscode" : true,
+        "_reports": true,
+        "karma.ps1": true,
+        // ".gitignore": true,
+        "debug.log": true,
+        "reports": true
+    }
+}
