@@ -8,7 +8,7 @@ export namespace Messages {
         data: ArrayBuffer;
     }
 
-    export class KeepAlife implements IMessage {
+    export class KeepAlive implements IMessage {
         get length(): number {
             return 1;
         }
@@ -24,9 +24,23 @@ export namespace Messages {
         get data(): ArrayBuffer {
             return new Uint8Array([ 0, 0, 0, 0]).buffer;
         }
+
+        static parse(data: ArrayBuffer): KeepAlive {
+            let view = new Uint8Array(data);
+            if (view.byteLength != 4) {
+                throw "The Keep Alive message should be of length 4.";
+            }
+
+            if (view.some(byte => byte !== 0)) {
+                throw "The Keep Alive message should be an array of bytes with value 0.";
+            }
+
+            return new KeepAlive();
+        }
     }
 
     export class Handshake implements IMessage {
+        private static expectedLength: number = 68;
         private static message: string = "BitTorrent protocol";
         private static clientId: string = "-DB1000-012345678901";
         private static options: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -65,7 +79,6 @@ export namespace Messages {
             for (let i = 0; i < Handshake.message.length; i++) {
                 arr.push(Handshake.message.charCodeAt(i));
             }
-
             for (let index in Handshake.options) {
                 arr.push(Handshake.options[index]);
             }
@@ -74,6 +87,36 @@ export namespace Messages {
             let messageBody = new Uint8Array(this.payload);
             let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(messageHeader, messageBody);
             return fullMessage.buffer;
+        }
+
+        static parser(data: ArrayBuffer): Handshake {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== Handshake.expectedLength) {
+                 throw "The Handshake message should be of length 68.";
+            }
+
+            if (view[0] !== 19) {
+                throw "The Handshake message should begin with the number 19.";
+            }
+
+            let protocol = view.slice(1, 20);
+            let protocolMessage = "";
+            for (let index in protocol) {
+                protocolMessage += String.fromCharCode(protocol[index]);
+            }
+
+            if (protocolMessage !== Handshake.message) {
+                throw `The Handshake message should contain the string ${ Handshake.message }`;
+            }
+
+            let infoHashByes = data.slice(20);
+            let infoHash = "";
+            for (let index in protocol) {
+                infoHash += String.fromCharCode(protocol[index]);
+            }
+
+            return new Handshake(infoHash);
         }
     }
 

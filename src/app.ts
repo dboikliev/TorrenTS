@@ -51,22 +51,6 @@ function request(message: Messages.Handshake, peerIp: string, peerPort: number, 
             processData(socket.received);
             return socket;
         })
-        .then(socket => {
-            let data = new Messages.Unchoke().data;
-            console.log(data.byteLength);
-            socket.send(data);
-            return socket;
-        })
-        .then(socket => {
-            processData(socket.received);
-            return socket;
-        })
-        .then(socket => socket.send(new Messages.Interested().data))
-        .then(socket => {
-            // console.log(socket.received)
-            processData(socket.received);
-            return socket;
-        })
         .catch(error => console.log(error));
 
     function processData(data) {
