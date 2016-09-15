@@ -89,7 +89,7 @@ export namespace Messages {
             return fullMessage.buffer;
         }
 
-        static parser(data: ArrayBuffer): Handshake {
+        static parse(data: ArrayBuffer): Handshake {
             let view = new Uint8Array(data);
 
             if (view.byteLength !== Handshake.expectedLength) {
