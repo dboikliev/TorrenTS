@@ -177,7 +177,7 @@ export namespace Messages {
             return new Uint8Array([ 0, 0, 0, this.length, this.messageId ]).buffer;
         }
 
-         static parse(data: ArrayBuffer): Choke {
+        static parse(data: ArrayBuffer): Unchoke {
             let view = new Uint8Array(data);
 
             if (view.byteLength !== Choke.expectedLength) {
