@@ -180,7 +180,7 @@ export namespace Messages {
         static parse(data: ArrayBuffer): Unchoke {
             let view = new Uint8Array(data);
 
-            if (view.byteLength !== Choke.expectedLength) {
+            if (view.byteLength !== Unchoke.expectedLength) {
                 throw `The Unchoke message should be of length ${ Unchoke.expectedLength }.`;
             }
 
