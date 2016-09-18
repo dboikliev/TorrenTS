@@ -121,7 +121,7 @@ export namespace Messages {
     }
 
     export class Choke implements IMessage {
-        static expectedLength: number = 4;
+        static expectedLength: number = 5;
 
         get length(): number {
             return 1;
@@ -142,8 +142,8 @@ export namespace Messages {
         static parse(data: ArrayBuffer): Choke {
             let view = new Uint8Array(data);
 
-            if (view.byteLength !== 5) {
-                throw "The Choke message should be of length 5.";
+            if (view.byteLength !== Choke.expectedLength) {
+                throw `The Choke message should be of length ${ Choke.expectedLength }.`;
             }
 
             if (view[0] !== 0 || view[1]  !== 0 || view[2] !== 0 || view[3] !== 1) {
@@ -159,6 +159,8 @@ export namespace Messages {
     }
 
     export class Unchoke implements IMessage {
+        static expectedLength: number = 5;
+
         get length(): number {
             return 1;
         }
@@ -173,6 +175,24 @@ export namespace Messages {
 
         get data(): ArrayBuffer {
             return new Uint8Array([ 0, 0, 0, this.length, this.messageId ]).buffer;
+        }
+
+         static parse(data: ArrayBuffer): Choke {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== Choke.expectedLength) {
+                throw `The Unchoke message should be of length ${ Unchoke.expectedLength }.`;
+            }
+
+            if (view[0] !== 0 || view[1]  !== 0 || view[2] !== 0 || view[3] !== 1) {
+                throw "The Unchoke message should have data of length 1.";
+            }
+
+            if (view[4] !== 0) {
+                throw "The Unchoke message should have id equal to 1.";
+            }
+
+            return new Unchoke();
         }
     }
 
