@@ -235,6 +235,8 @@ export namespace Messages {
     }
 
     export class NotInterested implements IMessage {
+        static expectedLength: number = 5;
+
         get length(): number {
             return 1;
         }
@@ -249,6 +251,24 @@ export namespace Messages {
 
         get data(): ArrayBuffer {
             return new Uint8Array([ 0, 0, 0, this.length, this.messageId ]).buffer;
+        }
+
+        static parse(data: ArrayBuffer): NotInterested {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== NotInterested.expectedLength) {
+                throw `The NotInterested message should be of length ${ NotInterested.expectedLength }.`;
+            }
+
+            if (view[0] !== 0 || view[1]  !== 0 || view[2] !== 0 || view[3] !== 1) {
+                throw "The NotInterested message should have data of length 1.";
+            }
+
+            if (view[4] !== 3) {
+                throw "The NotInterested message should have id equal to 3.";
+            }
+
+            return new NotInterested();
         }
     }
 
