@@ -188,7 +188,7 @@ export namespace Messages {
                 throw "The Unchoke message should have data of length 1.";
             }
 
-            if (view[4] !== 0) {
+            if (view[4] !== 1) {
                 throw "The Unchoke message should have id equal to 1.";
             }
 
@@ -197,6 +197,8 @@ export namespace Messages {
     }
 
     export class Interested implements IMessage {
+        static expectedLength: number = 5;
+
         get length(): number {
             return 1;
         }
@@ -211,6 +213,24 @@ export namespace Messages {
 
         get data(): ArrayBuffer {
             return new Uint8Array([ 0, 0, 0, this.length, this.messageId ]).buffer;
+        }
+
+        static parse(data: ArrayBuffer): Interested {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== Interested.expectedLength) {
+                throw `The Interested message should be of length ${ Interested.expectedLength }.`;
+            }
+
+            if (view[0] !== 0 || view[1]  !== 0 || view[2] !== 0 || view[3] !== 1) {
+                throw "The Interested message should have data of length 1.";
+            }
+
+            if (view[4] !== 2) {
+                throw "The Interested message should have id equal to 2.";
+            }
+
+            return new Interested();
         }
     }
 
