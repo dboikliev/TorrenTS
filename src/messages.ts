@@ -280,7 +280,7 @@ export namespace Messages {
             if (typeof pieceIndex === "number") {
                 this._payload = BinaryOperations.ByteConverter.convertUint32ToUint8Array(pieceIndex as number, 4);
             }
-            else if (typeof pieceIndex === "ArrayBuffer") {
+            else if (pieceIndex instanceof ArrayBuffer) {
                 this._payload = pieceIndex;
             }
         }
@@ -326,15 +326,23 @@ export namespace Messages {
     }
 
     export class Bitfield implements IMessage {
-        private hasPieces: boolean[];
+        private _payload: ArrayBuffer;
 
 
-        constructor(hasPieces: boolean[]) {
-            this.hasPieces = hasPieces;
+        constructor(hasPieces: boolean[] | ArrayBuffer) {
+            if (hasPieces instanceof ArrayBuffer) {
+               this._payload = hasPieces as ArrayBuffer;
+            }
+            else if (hasPieces instanceof Array) {
+                let hasPiecesString = hasPieces.join("");
+                let hasPiecesNumerical = parseInt(hasPiecesString, 2);
+                let numberOfBytes = Math.ceil(hasPiecesString.length / 8);
+                this._payload = BinaryOperations.ByteConverter.convertUint32ToUint8Array(hasPiecesNumerical, numberOfBytes);
+            }
         }
 
         get length(): number {
-            return 1 + this.hasPieces.length;
+            return 1 + this._payload.byteLength;
         }
 
         get messageId(): number {
@@ -342,11 +350,7 @@ export namespace Messages {
         }
 
         get data(): ArrayBuffer {
-            let hasPiecesString = this.hasPieces.join("");
-            let hasPiecesNumerical = parseInt(hasPiecesString, 2);
-            let numberOfBytes = Math.ceil(hasPiecesString.length / 8);
-            let messageBody = BinaryOperations.ByteConverter.convertUint32ToUint8Array(hasPiecesNumerical, numberOfBytes);
-            return messageBody;
+            return this._payload;
         }
 
         get payload() {
@@ -355,6 +359,22 @@ export namespace Messages {
             let messageHeader = BinaryOperations.ByteConverter.combineByteArrays(lengthBytes, new Uint8Array([ this.messageId ]), lengthBytes);
             let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(messageHeader, messageBody);
             return fullMessage.buffer;
+        }
+
+        static parse(data: ArrayBuffer): Bitfield {
+            let view = new Uint8Array(data);
+
+            let dataLength = BinaryOperations.ByteConverter.convertUint8ArrayToUint32(view.slice(0, 5));
+            if (data.byteLength === 4 + dataLength) {
+                throw `The Bitfield message should be of length ${ 4 + dataLength }.`;
+            }
+
+            if (view[4] !== 5) {
+                throw "The Bitfield message should have id equal to 5.";
+            }
+
+            let hasPiecesBytes = view.slice(5);
+            return new Bitfield(hasPiecesBytes);
         }
     }
 

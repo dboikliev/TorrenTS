@@ -8,6 +8,12 @@ export namespace BinaryOperations {
             return view;
         }
 
+        static convertUint8ArrayToUint32(bytes: Uint8Array, isLittleEndian: boolean = false) {
+            let dataView = new DataView(bytes.buffer);
+            let Uint32 = dataView.getUint32(0, isLittleEndian);
+            return Uint32;
+        }
+        
         static combineByteArrays(...arrays: Uint8Array[]): Uint8Array {
             let combinedLength = 0;
             for (let index in arrays) {
