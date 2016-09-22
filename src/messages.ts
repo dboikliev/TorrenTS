@@ -27,7 +27,7 @@ export namespace Messages {
 
         static parse(data: ArrayBuffer): KeepAlive {
             let view = new Uint8Array(data);
-            if (view.byteLength != 4) {
+            if (view.byteLength !== 4) {
                 throw "The Keep Alive message should be of length 4.";
             }
 
@@ -273,10 +273,16 @@ export namespace Messages {
     }
 
     export class Have implements IMessage {
-        private pieceIndex: number;
+        static expectedLength: number = 10;
+        private _payload: ArrayBuffer;
 
-        constructor(pieceIndex: number) {
-            this.pieceIndex = pieceIndex;
+        constructor(pieceIndex: number | ArrayBuffer) {
+            if (typeof pieceIndex === "number") {
+                this._payload = BinaryOperations.ByteConverter.convertUint32ToUint8Array(pieceIndex as number, 4);
+            }
+            else if (typeof pieceIndex === "ArrayBuffer") {
+                this._payload = pieceIndex;
+            }
         }
 
         get length(): number {
@@ -288,10 +294,7 @@ export namespace Messages {
         }
 
         get payload(): ArrayBuffer {
-            let data  = new Uint8Array([this.pieceIndex]);
-            let result = new Uint8Array(4);
-            result.set(result, 3);
-            return result.buffer;
+            return this._payload;
         }
 
         get data(): ArrayBuffer {
@@ -300,6 +303,25 @@ export namespace Messages {
             result.set(data, 0);
             result.set(new Uint8Array(this.payload), data.length);
             return result.buffer;
+        }
+
+        static parse(data: ArrayBuffer): Have {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== Have.expectedLength) {
+                throw `The Have message should be of length ${ Have.expectedLength }.`;
+            }
+
+            if (view[0] !== 0 || view[1]  !== 0 || view[2] !== 0 || view[3] !== 5) {
+                throw "The Have message should have data of length 5.";
+            }
+
+            if (view[4] !== 4) {
+                throw "The Have message should have id equal to 4.";
+            }
+
+            let pieceIndexBytes = view.slice(6);
+            return new Have(pieceIndexBytes);
         }
     }
 
