@@ -13,7 +13,7 @@ export namespace BinaryOperations {
             let Uint32 = dataView.getUint32(0, isLittleEndian);
             return Uint32;
         }
-        
+
         static combineByteArrays(...arrays: Uint8Array[]): Uint8Array {
             let combinedLength = 0;
             for (let index in arrays) {
