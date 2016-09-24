@@ -434,11 +434,11 @@ export namespace Messages {
             let view = new Uint8Array(data);
 
             if (view.byteLength !== Request.expectedLength) {
-                throw `The Bitfield message should be of length ${ Request.expectedLength }.`;
+                throw `The Request message should be of length ${ Request.expectedLength }.`;
             }
 
             if (view[4] !== 6) {
-                throw "The Bitfield message should have id equal to 6.";
+                throw "The Request message should have id equal to 6.";
             }
 
             return new Request(view.slice(5, 9), view.slice(9, 13), view.slice(13));
