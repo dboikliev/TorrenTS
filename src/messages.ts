@@ -379,7 +379,7 @@ export namespace Messages {
     }
 
     export class Request implements IMessage {
-        static expectedLength: number;
+        static expectedLength: number = 17;
         private pieceIndex: Uint8Array;
         private begin: Uint8Array;
         private pieceLength: Uint8Array;
@@ -416,9 +416,6 @@ export namespace Messages {
         }
 
         get payload(): ArrayBuffer {
-            // let pieceIndexBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.pieceIndex, 4);
-            // let beginBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.begin, 4);
-            // let pieceLengthBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.pieceLength, 4);
             let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(this.pieceIndex, this.begin, this.pieceLength);
             return fullMessage.buffer;
         }
@@ -446,14 +443,32 @@ export namespace Messages {
     }
 
     export class Piece implements IMessage {
-        private pieceIndex: number;
-        private begin: number;
-        private pieceLength: number;
+        static expectedLength: number = 17;
+        private pieceIndex: Uint8Array;
+        private begin: Uint8Array;
+        private pieceLength: Uint8Array;
 
-        constructor(pieceIndex: number, begin: number, pieceLength: number) {
-            this.pieceIndex = pieceIndex;
-            this.begin = begin;
-            this.pieceLength = pieceLength;
+        constructor(pieceIndex: number | ArrayBuffer, begin: number | ArrayBuffer, pieceLength: number | ArrayBuffer) {
+            if (pieceIndex instanceof ArrayBuffer) {
+                this.pieceIndex = new Uint8Array(pieceIndex);
+            }
+            else if (typeof pieceIndex === "number") {
+                this.pieceIndex = BinaryOperations.ByteConverter.convertUint32ToUint8Array(pieceIndex, 4);
+            }
+
+            if (begin instanceof ArrayBuffer) {
+                this.begin = new Uint8Array(begin);
+            }
+            else if (typeof pieceIndex === "number") {
+                this.begin = BinaryOperations.ByteConverter.convertUint32ToUint8Array(begin, 4);
+            }
+
+            if (pieceLength instanceof ArrayBuffer) {
+                this.pieceLength = new Uint8Array(pieceLength);
+            }
+            else if (typeof pieceIndex === "number") {
+                this.pieceLength = BinaryOperations.ByteConverter.convertUint32ToUint8Array(pieceLength, 4);
+            }
         }
 
         get length(): number {
@@ -461,22 +476,33 @@ export namespace Messages {
         }
 
         get messageId(): number {
-            return 6;
+            return 7;
         }
 
         get payload(): ArrayBuffer {
-            let pieceIndexBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.pieceIndex, 4);
-            let beginBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.begin, 4);
-            let pieceLengthBytes = BinaryOperations.ByteConverter.convertUint32ToUint8Array(this.pieceLength, 4);
-            let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(pieceIndexBytes, beginBytes, pieceLengthBytes);
+            let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(this.pieceIndex, this.begin, this.pieceLength);
             return fullMessage.buffer;
         }
 
         get data(): ArrayBuffer {
-            let messageHeader =  new Uint8Array([ 0, 0, 0, this.pieceLength, this.messageId ]);
+            let messageHeader =  new Uint8Array([ 0, 0, 0, this.length, this.messageId ]);
             let messageBody = new Uint8Array(this.payload);
             let fullMessage = BinaryOperations.ByteConverter.combineByteArrays(messageHeader, messageBody);
             return fullMessage.buffer;
+        }
+
+        static parse(data: ArrayBuffer): Piece {
+            let view = new Uint8Array(data);
+
+            if (view.byteLength !== Request.expectedLength) {
+                throw `The Piece message should be of length ${ Request.expectedLength }.`;
+            }
+
+            if (view[4] !== 7) {
+                throw "The Piece message should have id equal to 7.";
+            }
+
+            return new Piece(view.slice(5, 9), view.slice(9, 13), view.slice(13));
         }
     }
 
