@@ -1,4 +1,4 @@
-import { NetworkIO } from "./networkio";
+import { Socket } from "./networkio";
 
 class Peer {
     private ip: string;
@@ -13,6 +13,8 @@ class Peer {
 
     connect() {
         NetworkIO.Socket.create(this.ip, this.port)
-            .then(socket => socket.connect());
+            .then(socket => {
+                socket.connect();
+            });
     }
 }

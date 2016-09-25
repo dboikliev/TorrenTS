@@ -1,6 +1,6 @@
 import {Torrent} from "./torrent";
 import { BencodedParser, IBencodedParser } from "./parsing";
-import {NetworkIO} from "./networkio";
+import { Socket } from "./networkio";
 import { Handshake } from "./messages";
 
 let fileInput = document.getElementById("file-input") as HTMLInputElement;
@@ -44,7 +44,7 @@ fileInput.onchange = () => {
 
 function request(message: Handshake, peerIp: string, peerPort: number, expectedPeerId: string) {
     let data: number[] = [];
-    NetworkIO.Socket.create(peerIp, peerPort)
+    Socket.create(peerIp, peerPort)
         .then(socket => socket.connect())
         .then(socket => socket.send(message.data))
         .then(socket => Handshake.parse(socket.received.slice(0, 68)))
