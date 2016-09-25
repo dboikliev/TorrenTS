@@ -1,11 +1,11 @@
-import {BencodeObjects} from "./bencode";
-import {Parsing} from "./parsing";
+import { BencodedDictionary, BencodedInteger, BencodedList, BencodedObject, BencodedString, IBencodedObject} from "./bencode";
+import { BencodedParser } from "./parsing";
 import * as CryptoJS from "crypto-js";
 
 export namespace Torrent {
     export class TorrentFile {
         private buffer: Uint8Array;
-        private dictionary: BencodeObjects.BencodedDictionary;
+        private dictionary: BencodedDictionary;
 
         constructor(buffer: ArrayBuffer) {
             let content = "";
@@ -17,12 +17,12 @@ export namespace Torrent {
                     content += String.fromCharCode(data_str[i]);
                 }
             }
-            let parser = new Parsing.BencodedParser(content);
-            this.dictionary = parser.parse() as BencodeObjects.BencodedDictionary;
+            let parser = new BencodedParser(content);
+            this.dictionary = parser.parse() as BencodedDictionary;
         }
 
-        get info(): BencodeObjects.BencodedDictionary {
-            return this.dictionary.value["info"] as BencodeObjects.BencodedDictionary;
+        get info(): BencodedDictionary {
+            return this.dictionary.value["info"] as BencodedDictionary;
         }
 
         get announce(): string {

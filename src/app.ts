@@ -1,7 +1,7 @@
 import {Torrent} from "./torrent";
-import {Parsing} from "./parsing";
+import { BencodedParser, IBencodedParser } from "./parsing";
 import {NetworkIO} from "./networkio";
-import {Messages} from "./messages";
+import { Handshake } from "./messages";
 
 let fileInput = document.getElementById("file-input") as HTMLInputElement;
 fileInput.onchange = () => {
@@ -17,7 +17,7 @@ fileInput.onchange = () => {
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     let binStr = xhr.responseText;
 
-                    let parser = new Parsing.BencodedParser(binStr);
+                    let parser = new BencodedParser(binStr);
                     let parsed = parser.parse();
                     let peers = parsed.value["peers"].value;
                     for (let p in peers) {
@@ -27,7 +27,7 @@ fileInput.onchange = () => {
                         let peerPort = peer["port"] && peer["port"].value;
                         // console.log(peerIp + " " + peerId + " " + peerPort);
 
-                        let handshake = new Messages.Handshake(torrent.computeInfoHash());
+                        let handshake = new Handshake(torrent.computeInfoHash());
 
                         request(handshake, peerIp, peerPort, peerId);
                     }
@@ -42,15 +42,12 @@ fileInput.onchange = () => {
     };
 };
 
-function request(message: Messages.Handshake, peerIp: string, peerPort: number, expectedPeerId: string) {
-
+function request(message: Handshake, peerIp: string, peerPort: number, expectedPeerId: string) {
+    let data: number[] = [];
     NetworkIO.Socket.create(peerIp, peerPort)
         .then(socket => socket.connect())
         .then(socket => socket.send(message.data))
-        .then(socket => {
-            processData(socket.received);
-            return socket;
-        })
+        .then(socket => Handshake.parse(socket.received.slice(0, 68)))
         .catch(error => console.log(error));
 
     function processData(data) {

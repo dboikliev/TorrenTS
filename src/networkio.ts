@@ -1,4 +1,4 @@
-import {Messages} from "./messages";
+import { Handshake } from "./messages";
 
 export namespace NetworkIO {
     export class Socket {
