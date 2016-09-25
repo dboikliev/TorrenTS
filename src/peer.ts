@@ -12,7 +12,7 @@ class Peer {
     }
 
     connect() {
-        NetworkIO.Socket.create(this.ip, this.port)
+        Socket.create(this.ip, this.port)
             .then(socket => {
                 socket.connect();
             });
