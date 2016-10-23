@@ -45,9 +45,13 @@ fileInput.onchange = () => {
 function request(message: Handshake, peerIp: string, peerPort: number, expectedPeerId: string) {
     let data: number[] = [];
     Socket.create(peerIp, peerPort)
-        .then(socket => socket.connect())
-        .then(socket => socket.send(message.data))
-        .then(socket => Handshake.parse(socket.received.slice(0, 68)))
+        .then(socket => {
+            socket.onReceive = (data: ArrayBuffer) => { console.log(`%c ${ socket.id } `, "background: #222; color: #bada55"); console.log(new Uint8Array(data).toString()); };
+            socket.onReceiveError = (error: chrome.sockets.tcp.ReceiveErrorEventArgs) => { console.log(`Result code: ${error.resultCode}, Socket Id ${error.socketId}`); };
+            return socket.connect();
+        }, error => console.log(error))
+        .then(socket => socket.send(message.data), error => console.log(error))
+        // .then(socket => Handshake.parse(socket.received.slice(0, 68)))
         .catch(error => console.log(error));
 
     function processData(data) {

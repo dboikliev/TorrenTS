@@ -1,20 +1,43 @@
-import { Handshake } from "./messages";
-
 export class Socket {
-    private ip: string;
-    private port: number;
-    private id: number;
-    private _received: ArrayBuffer;
+    private _ip: string;
+    private _port: number;
+    private _id: number;
+    // private _received: ArrayBuffer;
+
+    onReceive: (data: ArrayBuffer) => void;
+    onReceiveError: (args: chrome.sockets.tcp.ReceiveErrorEventArgs) => void;
 
     constructor(id: number, ip: string, port: number) {
-        this.ip = ip;
-        this.id = id;
-        this.port = port;
+        this._ip = ip;
+        this._id = id;
+        this._port = port;
+
+        chrome.sockets.tcp.onReceive.addListener(received => {
+            if (received.socketId === this.id) {
+                // this._received = received.data;
+                this.onReceive(received.data);
+            }
+        });
+        chrome.sockets.tcp.onReceiveError.addListener(error =>  this.onReceiveError(error));
+    }
+
+    get id(): number {
+        return this._id;
+    }
+
+    get ip(): string {
+        return this._ip;
+    }
+
+        get port(): number {
+        return this._port;
     }
 
     public static create(ip: string, port: number): Promise<Socket> {
         let promise = new Promise<Socket>((resolve, reject) => {
-            chrome.sockets.tcp.create(info => resolve(new Socket(info.socketId, ip, port)));
+            chrome.sockets.tcp.create(info => {
+                resolve(new Socket(info.socketId, ip, port));
+            });
         });
         return promise;
     }
@@ -37,19 +60,11 @@ export class Socket {
         let payload = data;
 
         let promise = new Promise<Socket>((resolve, reject) => {
-            chrome.sockets.tcp.onReceive.addListener(received => {
-                this._received = received.data;
-                resolve(this);
-            });
-            chrome.sockets.tcp.onReceiveError.addListener(reject);
-            chrome.sockets.tcp.send(this.id, payload, () => {});
+            chrome.sockets.tcp.send(this.id, payload, () => { resolve(this); });
         });
         return promise;
     }
 
-    get received(): ArrayBuffer {
-        return this._received;
-    }
 }
 
 class SocketInfo {
