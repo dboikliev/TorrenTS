@@ -1,16 +1,16 @@
 import { Socket } from "./networkio";
 import { Handshake } from "./messages";
 
-class Peer {
+export class Peer {
     private ip: string;
     private port: number;
-    private id: string;
     private socket: Socket;
+    private isHandshakeReceived: boolean = false;
 
-    constructor(ip: string, port: number, id: string) {
+    constructor(ip: string, port: number) {
         this.ip = ip;
         this.port = port;
-        this.id = id;
+        
     }
 
     connect(): Promise<Peer> {
@@ -18,9 +18,9 @@ class Peer {
             Socket.create(this.ip, this.port)
             .then(socket => {
                 try {
-                    socket.connect();
+                    socket.onReceive = this.handleReceivedData;
                     this.socket = socket;
-                    resolve(this);
+                    socket.connect().then(() => resolve(this));
                 }
                 catch (error) {
                     reject(error);
@@ -40,5 +40,16 @@ class Peer {
                 reject(error);
             }
         });
+    }
+
+    private handleReceivedData(data: ArrayBuffer) {
+        let view = new Uint8Array(data);
+        if (!this.isHandshakeReceived) {
+            if (data.byteLength > 0 && view[0] === 19) {
+                this.isHandshakeReceived = true;
+                let handshake = Handshake.parse(data);
+                console.log(handshake);
+            }
+        }
     }
 }

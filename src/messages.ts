@@ -1,4 +1,5 @@
 import { ByteConverter } from "./binaryoperations";
+import * as CryptoJS from "crypto-js";
 
 export interface IMessage {
     length: number;
@@ -91,7 +92,7 @@ export class Handshake implements IMessage {
     static parse(data: ArrayBuffer): Handshake {
         let view = new Uint8Array(data);
 
-        if (view.byteLength !== Handshake.expectedLength) {
+        if (view.byteLength < Handshake.expectedLength) {
                 throw "The Handshake message should be of length 68.";
         }
 
@@ -109,12 +110,12 @@ export class Handshake implements IMessage {
             throw `The Handshake message should contain the string ${ Handshake.message }`;
         }
 
-        let infoHashByes = data.slice(20);
+        let infoHashByes = view.slice(28, 48);
         let infoHash = "";
-        for (let index in protocol) {
-            infoHash += String.fromCharCode(protocol[index]);
+        for (let index in infoHashByes) {
+            infoHash += String.fromCharCode(infoHashByes[index]);
         }
-
+        infoHash = CryptoJS.enc.Latin1.parse(infoHash).toString();
         return new Handshake(infoHash);
     }
 }

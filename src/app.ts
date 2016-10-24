@@ -2,6 +2,7 @@ import {Torrent} from "./torrent";
 import { BencodedParser, IBencodedParser } from "./parsing";
 import { Socket } from "./networkio";
 import { Handshake } from "./messages";
+import { Peer } from "./peer";
 
 let fileInput = document.getElementById("file-input") as HTMLInputElement;
 fileInput.onchange = () => {
@@ -27,9 +28,9 @@ fileInput.onchange = () => {
                         let peerPort = peer["port"] && peer["port"].value;
                         // console.log(peerIp + " " + peerId + " " + peerPort);
 
-                        let handshake = new Handshake(torrent.computeInfoHash());
+                        // let handshake = new Handshake(torrent.computeInfoHash());
 
-                        request(handshake, peerIp, peerPort, peerId);
+                        request(torrent.computeInfoHash(), peerIp, peerPort, peerId);
                     }
                 };
             };
@@ -42,17 +43,21 @@ fileInput.onchange = () => {
     };
 };
 
-function request(message: Handshake, peerIp: string, peerPort: number, expectedPeerId: string) {
+function request(infoHash: string, peerIp: string, peerPort: number, expectedPeerId: string) {
     let data: number[] = [];
-    Socket.create(peerIp, peerPort)
-        .then(socket => {
-            socket.onReceive = (data: ArrayBuffer) => { console.log(`%c ${ socket.id } `, "background: #222; color: #bada55"); console.log(new Uint8Array(data).toString()); };
-            socket.onReceiveError = (error: chrome.sockets.tcp.ReceiveErrorEventArgs) => { console.log(`Result code: ${error.resultCode}, Socket Id ${error.socketId}`); };
-            return socket.connect();
-        }, error => console.log(error))
-        .then(socket => socket.send(message.data), error => console.log(error))
-        // .then(socket => Handshake.parse(socket.received.slice(0, 68)))
-        .catch(error => console.log(error));
+    // Socket.create(peerIp, peerPort)
+    //     .then(socket => {
+    //         socket.onReceive = (data: ArrayBuffer) => { console.log(`%c ${ socket.id } `, "background: #222; color: #bada55"); console.log(new Uint8Array(data).toString()); };
+    //         socket.onReceiveError = (error: chrome.sockets.tcp.ReceiveErrorEventArgs) => { console.log(`Result code: ${error.resultCode}, Socket Id ${error.socketId}`); };
+    //         return socket.connect();
+    //     }, error => console.log(error))
+    //     .then(socket => socket.send(message.data), error => console.log(error))
+    //     // .then(socket => Handshake.parse(socket.received.slice(0, 68)))
+    //     .catch(error => console.log(error));
+    console.log(infoHash);
+    let peer = new Peer(peerIp, peerPort);
+    peer.connect()
+        .then(p => p.sendHandshake(infoHash))
 
     function processData(data) {
         let v = new Uint8Array(data);
