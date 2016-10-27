@@ -21,7 +21,7 @@ export class Socket {
         chrome.sockets.tcp.onReceiveError.addListener(error =>  this.onReceiveError(error));
     }
 
-    get id(): number {
+    private get id(): number {
         return this._id;
     }
 
