@@ -14,7 +14,6 @@ export class Socket {
 
         chrome.sockets.tcp.onReceive.addListener(received => {
             if (received.socketId === this.id) {
-                // this._received = received.data;
                 this.onReceive(received.data);
             }
         });

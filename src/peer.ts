@@ -1,5 +1,5 @@
 import { Socket } from "./networkio";
-import { Handshake } from "./messages";
+import { IMessage, Handshake } from "./messages";
 
 export class Peer {
     private ip: string;
@@ -7,10 +7,11 @@ export class Peer {
     private socket: Socket;
     private isHandshakeReceived: boolean = false;
 
+    onReceive: (message: IMessage) => void;
+
     constructor(ip: string, port: number) {
         this.ip = ip;
         this.port = port;
-        
     }
 
     connect(): Promise<Peer> {
@@ -18,7 +19,7 @@ export class Peer {
             Socket.create(this.ip, this.port)
             .then(socket => {
                 try {
-                    socket.onReceive = this.handleReceivedData;
+                    socket.onReceive = (data) => this.handleReceivedData(data);
                     this.socket = socket;
                     socket.connect().then(() => resolve(this));
                 }
@@ -48,7 +49,7 @@ export class Peer {
             if (data.byteLength > 0 && view[0] === 19) {
                 this.isHandshakeReceived = true;
                 let handshake = Handshake.parse(data);
-                console.log(handshake);
+                this.onReceive(handshake);
             }
         }
     }
