@@ -17,7 +17,7 @@ export class Socket {
                 this.onReceive(received.data);
             }
         });
-        chrome.sockets.tcp.onReceiveError.addListener(error =>  this.onReceiveError(error));
+        chrome.sockets.tcp.onReceiveError.addListener(error => this.onReceiveError && this.onReceiveError(error));
     }
 
     private get id(): number {
@@ -64,16 +64,4 @@ export class Socket {
         return promise;
     }
 
-}
-
-class SocketInfo {
-    private id;
-
-    constructor(socketId: number) {
-        this.id = socketId;
-    }
-
-    get socketId(): number {
-        return this.id;
-    }
 }

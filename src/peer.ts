@@ -1,11 +1,13 @@
 import { Socket } from "./networkio";
-import { IMessage, Handshake } from "./messages";
+import { IMessage, Handshake, Bitfield, Cancel, Choke, Have, Interested, KeepAlive, NotInterested, Piece, Request, Unchoke, MessageType } from "./messages";
+import { Buffer } from "./buffer";
 
 export class Peer {
     private ip: string;
     private port: number;
     private socket: Socket;
     private isHandshakeReceived: boolean = false;
+    private buffer: Buffer = new Buffer();
 
     onReceive: (message: IMessage) => void;
 
@@ -17,15 +19,15 @@ export class Peer {
     connect(): Promise<Peer> {
         return new Promise((resolve, reject) => {
             Socket.create(this.ip, this.port)
-            .then(socket => {
-                try {
-                    socket.onReceive = (data) => this.handleReceivedData(data);
-                    this.socket = socket;
-                    socket.connect().then(() => resolve(this));
-                }
-                catch (error) {
-                    reject(error);
-                }
+                .then(socket => {
+                    try {
+                        socket.onReceive = (data) => this.handleReceivedData(data);
+                        this.socket = socket;
+                        socket.connect().then(() => resolve(this));
+                    }
+                    catch (error) {
+                        reject(error);
+                    }
             });
         });
     }
@@ -44,13 +46,23 @@ export class Peer {
     }
 
     private handleReceivedData(data: ArrayBuffer) {
-        let view = new Uint8Array(data);
+        this.buffer.write(data);
+
         if (!this.isHandshakeReceived) {
-            if (data.byteLength > 0 && view[0] === 19) {
-                this.isHandshakeReceived = true;
-                let handshake = Handshake.parse(data);
-                this.onReceive(handshake);
-            }
+           this.handleHandshake();
+        }
+    }
+
+    private handleHandshake() {
+        if (this.buffer.length >= Handshake.expectedLength && this.buffer.elementAt(0) === 19) {
+            this.isHandshakeReceived = true;
+
+            let messageData = this.buffer.read(Handshake.expectedLength);
+            this.buffer.clear(Handshake.expectedLength);
+            console.log(new Uint8Array(messageData).join(","));
+            let handshake = Handshake.parse(messageData);
+
+            this.onReceive(handshake);
         }
     }
 }

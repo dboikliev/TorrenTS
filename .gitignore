@@ -14,3 +14,4 @@ debug.log
 /compiled/src/**/*.js.map
 /compiled/tests/**/*spec.js
 /compiled/tests/**/*spec.js.map
+/.vscode/chrome/**/*

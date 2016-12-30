@@ -1,6 +1,21 @@
 import { ByteConverter } from "./binaryoperations";
 import * as CryptoJS from "crypto-js";
 
+export enum MessageType {
+    Handshake = -2,
+    KeepAlive = -1,
+    Choke = 0,
+    Unchoke = 1,
+    Interested = 2,
+    NotInterested = 3,
+    Have = 4,
+    Bitfield = 5,
+    Request = 6,
+    Piece = 7,
+    Cancel = 8,
+    Port = 9,
+}
+
 export interface IMessage {
     length: number;
     messageId: number;
@@ -14,7 +29,7 @@ export class KeepAlive implements IMessage {
     }
 
     get messageId(): number {
-        return -2;
+        return MessageType.KeepAlive;
     }
 
     get payload(): ArrayBuffer {
@@ -40,7 +55,7 @@ export class KeepAlive implements IMessage {
 }
 
 export class Handshake implements IMessage {
-    private static expectedLength: number = 68;
+    static expectedLength: number = 68;
     private static message: string = "BitTorrent protocol";
     private static clientId: string = "-DB1000-012345678901";
     private static options: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -56,7 +71,7 @@ export class Handshake implements IMessage {
     }
 
     get messageId(): number {
-        return -1;
+        return MessageType.Handshake;
     }
 
     get payload(): ArrayBuffer {
@@ -128,7 +143,7 @@ export class Choke implements IMessage {
     }
 
     get messageId(): number {
-        return 0;
+        return MessageType.Choke;
     }
 
     get payload(): ArrayBuffer {
@@ -166,7 +181,7 @@ export class Unchoke implements IMessage {
     }
 
     get messageId(): number {
-        return 1;
+        return MessageType.Unchoke;
     }
 
     get payload(): ArrayBuffer {
@@ -204,7 +219,7 @@ export class Interested implements IMessage {
     }
 
     get messageId(): number {
-        return 2;
+        return MessageType.Interested;
     }
 
     get payload(): ArrayBuffer {
@@ -242,7 +257,7 @@ export class NotInterested implements IMessage {
     }
 
     get messageId(): number {
-        return 3;
+        return MessageType.NotInterested;
     }
 
     get payload(): ArrayBuffer {
@@ -290,7 +305,7 @@ export class Have implements IMessage {
     }
 
     get messageId(): number {
-        return 4;
+        return MessageType.Have;
     }
 
     get payload(): ArrayBuffer {
@@ -328,7 +343,6 @@ export class Have implements IMessage {
 export class Bitfield implements IMessage {
     private _payload: ArrayBuffer;
 
-
     constructor(hasPieces: boolean[] | ArrayBuffer) {
         if (hasPieces instanceof ArrayBuffer) {
             this._payload = hasPieces as ArrayBuffer;
@@ -346,7 +360,7 @@ export class Bitfield implements IMessage {
     }
 
     get messageId(): number {
-        return 5;
+        return MessageType.Bitfield;
     }
 
     get data(): ArrayBuffer {
@@ -412,7 +426,7 @@ export class Request implements IMessage {
     }
 
     get messageId(): number {
-        return 6;
+        return MessageType.Request;
     }
 
     get payload(): ArrayBuffer {
@@ -476,7 +490,7 @@ export class Piece implements IMessage {
     }
 
     get messageId(): number {
-        return 7;
+        return MessageType.Piece;
     }
 
     get payload(): ArrayBuffer {
@@ -540,7 +554,7 @@ export class Cancel implements IMessage {
     }
 
     get messageId(): number {
-        return 8;
+        return MessageType.Cancel;
     }
 
     get payload(): ArrayBuffer {
