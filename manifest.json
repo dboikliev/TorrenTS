@@ -1,6 +1,6 @@
 {
   "name": "Hello World!",
-  "permissions": [ "http://*/"],
+  "permissions": [ "http://*/", {"fileSystem": ["write","directory","retainEntries"]}],
   "sockets": {
     "udp": {
       // Permission for chrome.sockets.udp.send:

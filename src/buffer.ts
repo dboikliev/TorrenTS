@@ -1,10 +1,15 @@
 export class Buffer {
     private data: ArrayBuffer;
 
+    constructor() {
+        this.data = new ArrayBuffer(0);
+    }
+
     write (data: ArrayBuffer | Uint8Array) {
-        let concatenation = new Uint8Array(((this.data && this.data.byteLength) || 0) + data.byteLength);
+        // let concatenation = new Uint8Array(((this.data && this.data.byteLength) || 0) + data.byteLength);
         let left = new Uint8Array(this.data);
         let right = new Uint8Array(data);
+        let concatenation = new Uint8Array(left.byteLength + right.byteLength);
         concatenation.set(left, 0);
         concatenation.set(right, left.length);
         this.data = concatenation.buffer;
@@ -19,7 +24,7 @@ export class Buffer {
     }
 
     clear (length?: number) {
-        this.data = this.data.slice(length || this.data.byteLength);
+        this.data = this.data.slice(length && length > 0 ? length : this.data.byteLength);
     }
 
     elementAt (index: number): number {

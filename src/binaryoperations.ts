@@ -9,8 +9,9 @@ export abstract class ByteConverter {
 
     static convertUint8ArrayToUint32(bytes: Uint8Array, isLittleEndian: boolean = false) {
         let dataView = new DataView(bytes.buffer);
-        let Uint32 = dataView.getUint32(0, isLittleEndian);
-        return Uint32;
+        // console.log(new Uint8Array(bytes.buffer));
+        let uint32 = dataView.getUint32(0, isLittleEndian);
+        return uint32;
     }
 
     static combineByteArrays(...arrays: Uint8Array[]): Uint8Array {

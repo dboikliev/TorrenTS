@@ -13,7 +13,7 @@ export enum MessageType {
     Request = 6,
     Piece = 7,
     Cancel = 8,
-    Port = 9,
+    Port = 9
 }
 
 export interface IMessage {
@@ -288,7 +288,7 @@ export class NotInterested implements IMessage {
 }
 
 export class Have implements IMessage {
-    static expectedLength: number = 10;
+    static expectedLength: number = 9;
     private _payload: ArrayBuffer;
 
     constructor(pieceIndex: number | ArrayBuffer) {
@@ -314,10 +314,11 @@ export class Have implements IMessage {
 
     get data(): ArrayBuffer {
         let data =  new Uint8Array([ 0, 0, 0, this.length, this.messageId ]);
-        let result = new Uint8Array(6);
-        result.set(data, 0);
-        result.set(new Uint8Array(this.payload), data.length);
-        return result.buffer;
+     
+        // let result = new Uint8Array(6);
+        // result.set(data, 0);
+        // result.set(new Uint8Array(this.payload), data.length);
+        return ByteConverter.combineByteArrays(data, new Uint8Array(this.payload)).buffer;
     }
 
     static parse(data: ArrayBuffer): Have {
@@ -335,8 +336,8 @@ export class Have implements IMessage {
             throw "The Have message should have id equal to 4.";
         }
 
-        let pieceIndexBytes = view.slice(6);
-        return new Have(pieceIndexBytes);
+        let pieceIndexBytes = view.slice(5);
+        return new Have(pieceIndexBytes.buffer);
     }
 }
 
@@ -356,7 +357,7 @@ export class Bitfield implements IMessage {
     }
 
     get length(): number {
-        return 1 + this._payload.byteLength;
+        return 1 + this._payload.byteLength + 4;
     }
 
     get messageId(): number {
@@ -364,22 +365,23 @@ export class Bitfield implements IMessage {
     }
 
     get data(): ArrayBuffer {
-        return this._payload;
+        let messageBody = new Uint8Array(this.payload);
+        let lengthBytes = ByteConverter.convertUint32ToUint8Array(this.length, 4);
+        let messageHeader = ByteConverter.combineByteArrays(lengthBytes, new Uint8Array([ this.messageId ]));
+        let fullMessage = ByteConverter.combineByteArrays(messageHeader, messageBody);
+        return fullMessage.buffer;
     }
 
     get payload() {
-        let messageBody = new Uint8Array(this.data);
-        let lengthBytes = ByteConverter.convertUint32ToUint8Array(this.length, 4);
-        let messageHeader = ByteConverter.combineByteArrays(lengthBytes, new Uint8Array([ this.messageId ]), lengthBytes);
-        let fullMessage = ByteConverter.combineByteArrays(messageHeader, messageBody);
-        return fullMessage.buffer;
+        return this._payload;
     }
 
     static parse(data: ArrayBuffer): Bitfield {
         let view = new Uint8Array(data);
 
-        let dataLength = ByteConverter.convertUint8ArrayToUint32(view.slice(0, 5));
-        if (data.byteLength === 4 + dataLength) {
+        let dataLength = ByteConverter.convertUint8ArrayToUint32(view.slice(0, 4));
+        console.log(`byteLength: ${view.byteLength}, dataLength: ${4 + dataLength}`)
+        if (view.byteLength !== 4 + dataLength) {
             throw `The Bitfield message should be of length ${ 4 + dataLength }.`;
         }
 
@@ -388,7 +390,7 @@ export class Bitfield implements IMessage {
         }
 
         let hasPiecesBytes = view.slice(5);
-        return new Bitfield(hasPiecesBytes);
+        return new Bitfield(hasPiecesBytes.buffer);
     }
 }
 
@@ -396,28 +398,28 @@ export class Request implements IMessage {
     static expectedLength: number = 17;
     private pieceIndex: Uint8Array;
     private begin: Uint8Array;
-    private pieceLength: Uint8Array;
+    private blockLength: Uint8Array;
 
-    constructor(pieceIndex: number | ArrayBuffer, begin: number | ArrayBuffer, pieceLength: number | ArrayBuffer) {
-        if (pieceIndex instanceof ArrayBuffer) {
-            this.pieceIndex = new Uint8Array(pieceIndex);
+    constructor(index: number | ArrayBuffer, begin: number | ArrayBuffer, length: number | ArrayBuffer) {
+        if (index instanceof ArrayBuffer) {
+            this.pieceIndex = new Uint8Array(index);
         }
-        else if (typeof pieceIndex === "number") {
-            this.pieceIndex = ByteConverter.convertUint32ToUint8Array(pieceIndex, 4);
+        else if (typeof index === "number") {
+            this.pieceIndex = ByteConverter.convertUint32ToUint8Array(index, 4);
         }
 
         if (begin instanceof ArrayBuffer) {
             this.begin = new Uint8Array(begin);
         }
-        else if (typeof pieceIndex === "number") {
+        else if (typeof index === "number") {
             this.begin = ByteConverter.convertUint32ToUint8Array(begin, 4);
         }
 
-        if (pieceLength instanceof ArrayBuffer) {
-            this.pieceLength = new Uint8Array(pieceLength);
+        if (length instanceof ArrayBuffer) {
+            this.blockLength = new Uint8Array(length);
         }
-        else if (typeof pieceIndex === "number") {
-            this.pieceLength = ByteConverter.convertUint32ToUint8Array(pieceLength, 4);
+        else if (typeof index === "number") {
+            this.blockLength = ByteConverter.convertUint32ToUint8Array(length, 4);
         }
     }
 
@@ -430,7 +432,8 @@ export class Request implements IMessage {
     }
 
     get payload(): ArrayBuffer {
-        let fullMessage = ByteConverter.combineByteArrays(this.pieceIndex, this.begin, this.pieceLength);
+        let fullMessage = ByteConverter.combineByteArrays(this.pieceIndex, this.begin);
+        fullMessage = ByteConverter.combineByteArrays(fullMessage, this.blockLength);
         return fullMessage.buffer;
     }
 
@@ -457,7 +460,6 @@ export class Request implements IMessage {
 }
 
 export class Piece implements IMessage {
-    static expectedLength: number = 17;
     private pieceIndex: Uint8Array;
     private begin: Uint8Array;
     private pieceLength: Uint8Array;
@@ -486,7 +488,7 @@ export class Piece implements IMessage {
     }
 
     get length(): number {
-        return 13;
+        return this.payload.byteLength + 1;
     }
 
     get messageId(): number {
@@ -499,7 +501,9 @@ export class Piece implements IMessage {
     }
 
     get data(): ArrayBuffer {
-        let messageHeader =  new Uint8Array([ 0, 0, 0, this.length, this.messageId ]);
+        let lengthArray = ByteConverter.convertUint32ToUint8Array(this.length, 4);
+        let messageIdArray =  new Uint8Array([ this.messageId ]);
+        let messageHeader = ByteConverter.combineByteArrays(lengthArray, messageIdArray);
         let messageBody = new Uint8Array(this.payload);
         let fullMessage = ByteConverter.combineByteArrays(messageHeader, messageBody);
         return fullMessage.buffer;
@@ -508,15 +512,11 @@ export class Piece implements IMessage {
     static parse(data: ArrayBuffer): Piece {
         let view = new Uint8Array(data);
 
-        if (view.byteLength !== Request.expectedLength) {
-            throw `The Piece message should be of length ${ Request.expectedLength }.`;
-        }
-
         if (view[4] !== 7) {
             throw "The Piece message should have id equal to 7.";
         }
 
-        return new Piece(view.slice(5, 9), view.slice(9, 13), view.slice(13));
+        return new Piece(view.slice(4, 8).buffer, view.slice(9, 13).buffer, view.slice(13).buffer);
     }
 }
 
@@ -572,8 +572,8 @@ export class Cancel implements IMessage {
     static parse(data: ArrayBuffer): Cancel {
         let view = new Uint8Array(data);
 
-        if (view.byteLength !== Request.expectedLength) {
-            throw `The Cancel message should be of length ${ Request.expectedLength }.`;
+        if (view.byteLength !== Cancel.expectedLength) {
+            throw `The Cancel message should be of length ${ Cancel.expectedLength }.`;
         }
 
         if (view[4] !== 7) {

@@ -1,8 +1,13 @@
-import { Torrent } from "./torrent";
+import { TorrentFile } from "./torrent";
 import { BencodedParser, IBencodedParser } from "./parsing";
 import { Socket } from "./networkio";
 import { Handshake } from "./messages";
 import { Peer } from "./peer";
+import { PieceManager } from "./pieceManager";
+
+ chrome.fileSystem.chooseEntry({type:"saveFile"},e => {
+                                        window["entry"] = e;
+                                    });
 
 let fileInput = document.getElementById("file-input") as HTMLInputElement;
 fileInput.onchange = () => {
@@ -10,8 +15,12 @@ fileInput.onchange = () => {
         let reader = new FileReader();
         reader.onloadend = (event) => {
             let buffer = (event.target as FileReader).result as ArrayBuffer;
-            let torrent = new Torrent.TorrentFile(buffer);
+            let torrent = new TorrentFile(buffer);
+            // console.log(torrent);
             let requestUrl = torrent.buildTrackerRequestUrl("-DB1000-012345678901", 6889, "started");
+            window["pieceManager"] = new PieceManager(torrent);
+            window["piece length"] = torrent.pieceLength;
+            window["torrent size"] = torrent.size;
 
             let xhr = new XMLHttpRequest();
             xhr.onreadystatechange = () => {
@@ -43,18 +52,14 @@ fileInput.onchange = () => {
     };
 };
 
+
+
 function request(infoHash: string, peerIp: string, peerPort: number, expectedPeerId: string) {
     let data: number[] = [];
     // console.log(infoHash);
-    let peer = new Peer(peerIp, peerPort);
-    peer.onReceive = message => console.log(message);
+    let peer = new Peer(peerIp, peerPort,   window["pieceManager"]);
     peer.connect()
         .then(p => p.sendHandshake(infoHash))
-
-    function processData(data) {
-        let v = new Uint8Array(data);
-        console.log(v);
-    }
 }
 
 function string2ArrayBuffer(string, callback) {

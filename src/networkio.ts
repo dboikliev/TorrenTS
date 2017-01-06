@@ -14,7 +14,7 @@ export class Socket {
 
         chrome.sockets.tcp.onReceive.addListener(received => {
             if (received.socketId === this.id) {
-                this.onReceive(received.data);
+                this.onReceive && this.onReceive(received.data);
             }
         });
         chrome.sockets.tcp.onReceiveError.addListener(error => this.onReceiveError && this.onReceiveError(error));
@@ -53,6 +53,10 @@ export class Socket {
             });
         });
         return promise;
+    }
+
+    public close(): void {
+        chrome.sockets.tcp.close(this.id, () => { console.log(`Closed socket ${ this.id }`); });
     }
 
     public send(data: ArrayBuffer): Promise<Socket> {
