@@ -9,7 +9,6 @@ export abstract class ByteConverter {
 
     static convertUint8ArrayToUint32(bytes: Uint8Array, isLittleEndian: boolean = false) {
         let dataView = new DataView(bytes.buffer);
-        // console.log(new Uint8Array(bytes.buffer));
         let uint32 = dataView.getUint32(0, isLittleEndian);
         return uint32;
     }
@@ -24,8 +23,10 @@ export abstract class ByteConverter {
         let combined = new Uint8Array(combinedLength);
         combined.set(arrays[0]);
 
+        let offset = arrays[0].length;
         for (let i = 1; i < arrays.length; i++) {
-            combined.set(arrays[i], arrays[i - 1].length);
+            combined.set(arrays[i], offset);
+            offset += arrays[i].length;
         }
 
         return combined;

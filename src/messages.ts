@@ -1,4 +1,5 @@
 import { ByteConverter } from "./binaryoperations";
+import { Buffer } from "./buffer";
 import * as CryptoJS from "crypto-js";
 
 export enum MessageType {
@@ -12,8 +13,7 @@ export enum MessageType {
     Bitfield = 5,
     Request = 6,
     Piece = 7,
-    Cancel = 8,
-    Port = 9
+    Cancel = 8
 }
 
 export interface IMessage {
@@ -357,7 +357,7 @@ export class Bitfield implements IMessage {
     }
 
     get length(): number {
-        return 1 + this._payload.byteLength + 4;
+        return 1 + this._payload.byteLength;
     }
 
     get messageId(): number {
@@ -378,9 +378,7 @@ export class Bitfield implements IMessage {
 
     static parse(data: ArrayBuffer): Bitfield {
         let view = new Uint8Array(data);
-
         let dataLength = ByteConverter.convertUint8ArrayToUint32(view.slice(0, 4));
-        console.log(`byteLength: ${view.byteLength}, dataLength: ${4 + dataLength}`)
         if (view.byteLength !== 4 + dataLength) {
             throw `The Bitfield message should be of length ${ 4 + dataLength }.`;
         }
@@ -462,9 +460,9 @@ export class Request implements IMessage {
 export class Piece implements IMessage {
     private pieceIndex: Uint8Array;
     private begin: Uint8Array;
-    private pieceLength: Uint8Array;
+    private block: Uint8Array;
 
-    constructor(pieceIndex: number | ArrayBuffer, begin: number | ArrayBuffer, pieceLength: number | ArrayBuffer) {
+    constructor(pieceIndex: number | ArrayBuffer, begin: number | ArrayBuffer, block: ArrayBuffer) {
         if (pieceIndex instanceof ArrayBuffer) {
             this.pieceIndex = new Uint8Array(pieceIndex);
         }
@@ -479,11 +477,8 @@ export class Piece implements IMessage {
             this.begin = ByteConverter.convertUint32ToUint8Array(begin, 4);
         }
 
-        if (pieceLength instanceof ArrayBuffer) {
-            this.pieceLength = new Uint8Array(pieceLength);
-        }
-        else if (typeof pieceIndex === "number") {
-            this.pieceLength = ByteConverter.convertUint32ToUint8Array(pieceLength, 4);
+        if (block instanceof ArrayBuffer) {
+            this.block = new Uint8Array(block);
         }
     }
 
@@ -496,7 +491,8 @@ export class Piece implements IMessage {
     }
 
     get payload(): ArrayBuffer {
-        let fullMessage = ByteConverter.combineByteArrays(this.pieceIndex, this.begin, this.pieceLength);
+        let fullMessage = ByteConverter.combineByteArrays(this.pieceIndex, this.begin);
+        fullMessage = ByteConverter.combineByteArrays(fullMessage, this.block);
         return fullMessage.buffer;
     }
 
@@ -515,8 +511,11 @@ export class Piece implements IMessage {
         if (view[4] !== 7) {
             throw "The Piece message should have id equal to 7.";
         }
+        let index = view.slice(5, 9).buffer;
+        let begin = view.slice(9, 13).buffer;
+        let block = view.slice(13).buffer;
 
-        return new Piece(view.slice(4, 8).buffer, view.slice(9, 13).buffer, view.slice(13).buffer);
+        return new Piece(index, begin, block);
     }
 }
 
@@ -581,5 +580,45 @@ export class Cancel implements IMessage {
         }
 
         return new Cancel(view.slice(5, 9), view.slice(9, 13), view.slice(13));
+    }
+}
+
+let parsers: { [type: number]: (data: ArrayBuffer) => IMessage } = {};
+parsers[MessageType.KeepAlive] = KeepAlive.parse;
+parsers[MessageType.Choke] = Choke.parse;
+parsers[MessageType.Unchoke] = Unchoke.parse;
+parsers[MessageType.Interested] = Interested.parse;
+parsers[MessageType.NotInterested] = NotInterested.parse;
+parsers[MessageType.Have] = Have.parse;
+parsers[MessageType.Bitfield] = Bitfield.parse;
+parsers[MessageType.Request] = Request.parse;
+parsers[MessageType.Piece] = Piece.parse;
+parsers[MessageType.Cancel] = Cancel.parse;
+
+
+export class MessageParser {
+    private static canParse(buffer: Buffer): boolean {
+        if (buffer.length > 4) {
+            let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4))) + 4;
+            if (buffer.length >= messageLength) {
+                let messageId = buffer.elementAt(4);
+                return !!MessageType[messageId];
+            }
+        }
+        return false;
+    }
+
+    public static parse(data: ArrayBuffer): IMessage {
+        let buffer = new Buffer();
+        buffer.write(data);
+        if (!MessageParser.canParse(buffer)) {
+            return;
+        }
+
+        let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4))) + 4;
+        let messageId = buffer.elementAt(4);
+        let messageData = buffer.read(messageLength);
+        let message = parsers[messageId](messageData);
+        return message;
     }
 }

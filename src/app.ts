@@ -3,11 +3,11 @@ import { BencodedParser, IBencodedParser } from "./parsing";
 import { Socket } from "./networkio";
 import { Handshake } from "./messages";
 import { Peer } from "./peer";
-import { PieceManager } from "./pieceManager";
+import { PieceManager } from "./pieces";
 
- chrome.fileSystem.chooseEntry({type:"saveFile"},e => {
-                                        window["entry"] = e;
-                                    });
+ chrome.fileSystem.chooseEntry({type: "saveFile"},e => {
+    window["entry"] = e;
+});
 
 let fileInput = document.getElementById("file-input") as HTMLInputElement;
 fileInput.onchange = () => {
@@ -57,9 +57,8 @@ fileInput.onchange = () => {
 function request(infoHash: string, peerIp: string, peerPort: number, expectedPeerId: string) {
     let data: number[] = [];
     // console.log(infoHash);
-    let peer = new Peer(peerIp, peerPort,   window["pieceManager"]);
-    peer.connect()
-        .then(p => p.sendHandshake(infoHash))
+    let peer = new Peer(peerIp, peerPort, window["pieceManager"]);
+    peer.connect().then(p => p.sendHandshake(infoHash))
 }
 
 function string2ArrayBuffer(string, callback) {
