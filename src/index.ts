@@ -19,16 +19,13 @@ let request = http.get(requestUrl, function(res) {
     console.log("STATUS: " + res.statusCode);
     console.log("HEADERS: " + JSON.stringify(res.headers));
 
-  // Buffer the body entirely for processing as a whole.
     let bodyChunks = [];
     res.on("data", function(chunk) {
-    // You can process streamed parts here...
         bodyChunks.push(chunk);
         }).on("end", function() {
             let body = Buffer.concat(bodyChunks);
             console.log("BODY: " + body);
             let binStr = body.toString("Latin1");
-            // ...and/or process the entire body here.
             let parser = new BencodedParser(binStr);
             let parsed = parser.parse();
             let peers = parsed.value["peers"].value;
