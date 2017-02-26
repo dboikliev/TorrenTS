@@ -18,8 +18,8 @@ export class Socket {
 
         this._socket = new net.Socket({ allowHalfOpen: false });
         this._socket.setKeepAlive(true, 100);
-        this._socket.on('data', recvBuf => this.onReceive && this.onReceive(recvBuf.buffer));
-        this._socket.on('error', error => this.onReceiveError && this.onReceiveError(error));
+        this._socket.on("data", recvBuf => this.onReceive && this.onReceive(recvBuf.buffer));
+        this._socket.on("error", error => this.onReceiveError && this.onReceiveError(error));
     }
 
     private get id(): number {
