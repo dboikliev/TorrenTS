@@ -1,5 +1,5 @@
 import { ByteConverter } from "./binaryoperations";
-import { Buffer } from "./buffer";
+import { BinaryBuffer } from "./buffer";
 import * as CryptoJS from "crypto-js";
 
 export enum MessageType {
@@ -106,8 +106,7 @@ export class Handshake implements IMessage {
 
     static parse(data: ArrayBuffer): Handshake {
         let view = new Uint8Array(data);
-
-        if (view.byteLength < Handshake.expectedLength) {
+        if (view.byteLength !== Handshake.expectedLength) {
                 throw "The Handshake message should be of length 68.";
         }
 
@@ -156,8 +155,8 @@ export class Choke implements IMessage {
 
     static parse(data: ArrayBuffer): Choke {
         let view = new Uint8Array(data);
-
         if (view.byteLength !== Choke.expectedLength) {
+            console.log(view);
             throw `The Choke message should be of length ${ Choke.expectedLength }.`;
         }
 
@@ -293,7 +292,7 @@ export class Have implements IMessage {
 
     constructor(pieceIndex: number | ArrayBuffer) {
         if (typeof pieceIndex === "number") {
-            this._payload = ByteConverter.convertUint32ToUint8Array(pieceIndex as number, 4);
+            this._payload = ByteConverter.convertUint32ToUint8Array(pieceIndex as number, 4).buffer;
         }
         else if (pieceIndex instanceof ArrayBuffer) {
             this._payload = pieceIndex;
@@ -352,7 +351,7 @@ export class Bitfield implements IMessage {
             let hasPiecesString = hasPieces.join("");
             let hasPiecesNumerical = parseInt(hasPiecesString, 2);
             let numberOfBytes = Math.ceil(hasPiecesString.length / 8);
-            this._payload = ByteConverter.convertUint32ToUint8Array(hasPiecesNumerical, numberOfBytes);
+            this._payload = ByteConverter.convertUint32ToUint8Array(hasPiecesNumerical, numberOfBytes).buffer;
         }
     }
 
@@ -453,7 +452,7 @@ export class Request implements IMessage {
             throw "The Request message should have id equal to 6.";
         }
 
-        return new Request(view.slice(5, 9), view.slice(9, 13), view.slice(13));
+        return new Request(view.slice(5, 9).buffer, view.slice(9, 13).buffer, view.slice(13).buffer);
     }
 }
 
@@ -508,9 +507,15 @@ export class Piece implements IMessage {
     static parse(data: ArrayBuffer): Piece {
         let view = new Uint8Array(data);
 
-        if (view[4] !== 7) {
+        if (view[4] !== MessageType.Piece) {
             throw "The Piece message should have id equal to 7.";
         }
+        
+        let length = ByteConverter.convertUint8ArrayToUint32(view.slice(0, 5));
+        if (length + 4 !== view.byteLength) {
+            throw `The Piece message should have id equal to ${ length + 4 }.`;
+        }
+
         let index = view.slice(5, 9).buffer;
         let begin = view.slice(9, 13).buffer;
         let block = view.slice(13).buffer;
@@ -579,7 +584,7 @@ export class Cancel implements IMessage {
             throw "The Cancel message should have id equal to 7.";
         }
 
-        return new Cancel(view.slice(5, 9), view.slice(9, 13), view.slice(13));
+        return new Cancel(view.slice(5, 9).buffer, view.slice(9, 13).buffer, view.slice(13).buffer);
     }
 }
 
@@ -597,10 +602,11 @@ parsers[MessageType.Cancel] = Cancel.parse;
 
 
 export class MessageParser {
-    private static canParse(buffer: Buffer): boolean {
+    private static canParse(buffer: BinaryBuffer): boolean {
         if (buffer.length > 4) {
-            let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4))) + 4;
-            if (buffer.length >= messageLength) {
+            let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4)));
+            // console.log(buffer.length, messageLength);
+            if (buffer.length >= messageLength + 4) {
                 let messageId = buffer.elementAt(4);
                 return !!MessageType[messageId];
             }
@@ -609,7 +615,7 @@ export class MessageParser {
     }
 
     public static parse(data: ArrayBuffer): IMessage {
-        let buffer = new Buffer();
+        let buffer = new BinaryBuffer();
         buffer.write(data);
         if (!MessageParser.canParse(buffer)) {
             return;

@@ -6,17 +6,23 @@ export class TorrentFile {
     private buffer: Uint8Array;
     private dictionary: BencodedDictionary;
 
-    constructor(buffer: ArrayBuffer) {
-        let content = "";
-        if (ArrayBuffer.isView(buffer)) {
-            this.buffer = new Uint8Array(buffer);
-        } else {
-            let data_str = new Uint8Array(buffer);
-            for (let i = 0; i < data_str.length; ++i) {
-                content += String.fromCharCode(data_str[i]);
+    constructor(buffer: ArrayBuffer | string) {
+        let parser;
+        if (buffer instanceof ArrayBuffer) {
+            let content = "";
+            if (ArrayBuffer.isView(buffer)) {
+                this.buffer = new Uint8Array(buffer);
+            } else {
+                let data_str = new Uint8Array(buffer);
+                for (let i = 0; i < data_str.length; ++i) {
+                    content += String.fromCharCode(data_str[i]);
+                }
             }
+            parser = new BencodedParser(content);
         }
-        let parser = new BencodedParser(content);
+        else if(typeof buffer === "string") {
+            parser = new BencodedParser(buffer);
+        }
         this.dictionary = parser.parse() as BencodedDictionary;
     }
 
@@ -75,11 +81,12 @@ export class TorrentFile {
 
     computeUrlEncodedInfoHash(): string {
         let sha = this.computeInfoHash();
+        console.log(sha);
         return sha.replace(/(.{2})/g, "%\$1");
     }
 
     // TODO: Extract the parameters into an object and build the url dynamically..
     buildTrackerRequestUrl(peerId: string, port: number,  event: string): string {
-        return `${ this.announce }&info_hash=${ this.computeUrlEncodedInfoHash() }&peer_id=${ peerId }&port=${ port }&event=${ event }`;
+        return `${ this.announce }&info_hash=${ this.computeUrlEncodedInfoHash() }&peer_id=${ peerId }&port=${ port }&event=${ event }&left=${ this.size }`;
     }
 }

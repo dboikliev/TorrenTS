@@ -4,7 +4,7 @@
         "**/.git": true,
         "**/.svn": true,
         "**/.DS_Store": true,
-        // "**/*.js" : { "when" : "$(basename).ts" },
+        "**/*.js" : { "when" : "$(basename).ts" },
         "**/*.js.map" : true,
         "node_modules" : true,
         ".vscode" : true,
@@ -13,7 +13,6 @@
         // ".gitignore": true,
         "debug.log": true,
         "reports": true
-    }
-,
-"typescript.tsdk": "./node_modules/typescript/lib"
+    },
+    "vsicons.presets.angular": false
 }

@@ -1,15 +1,17 @@
 import { Socket } from "./networkio";
 import { MessageParser, IMessage, Handshake, Bitfield, Cancel, Choke, Have, Interested, KeepAlive, NotInterested, Piece, Request, Unchoke, MessageType } from "./messages";
-import { Buffer } from "./buffer";
+import { BinaryBuffer } from "./buffer";
 import { ByteConverter } from "./binaryoperations";
 import { PieceManager, PieceQueue, TorrentPiece, PieceBlock } from "./pieces";
+
+import * as fs from "fs";
 
 export class Peer {
     private ip: string;
     private port: number;
     private socket: Socket;
     private isHandshakeReceived: boolean = false;
-    private buffer: Buffer = new Buffer();
+    private buffer: BinaryBuffer = new BinaryBuffer();
     private queue: PieceQueue = new PieceQueue();
     private pieceManager: PieceManager;
 
@@ -27,8 +29,12 @@ export class Peer {
                 .then(socket => {
                     try {
                         socket.onReceive = (data) => this.handleReceivedData(data);
+                        socket.onReceiveError = () => {
+                            this.socket = new Socket(0, this.ip, this.port);
+                            this.socket.connect().then(() => resolve(this),  reject);
+                        };
                         this.socket = socket;
-                        socket.connect().then(() => resolve(this));
+                        socket.connect().then(() => resolve(this),  reject);
                     }
                     catch (error) {
                         reject(error);
@@ -63,26 +69,29 @@ export class Peer {
                 }
                 else if (message.messageId === MessageType.Bitfield) {
                     let view = new Uint8Array(message.payload);
-                    let isEmpty = this.queue.length === 0;
+                    let wasEmpty = this.queue.length === 0;
                     for (let i = 0; i < view.length; i++) {
                         let byte = view[i];
                         for (let j = 0; j < 8; j++) {
-                            if (byte % 2) {
-                                this.queue.enqueue(new TorrentPiece(i * 8 + 7 - j));
+                            if (byte & (1 << (7 - j))) {
+                                this.queue.enqueue(new TorrentPiece(i * 8 + j,
+                                    this.pieceManager.totalSize, 
+                                    this.pieceManager.maxPieceSize));
                             }
-                            byte /= 2;
                         }
                     }
 
-                    if (isEmpty) {
+                    if (wasEmpty) {
                         this.requestBlock();
                     }
                 }
                 else if (message.messageId === MessageType.Have) {
                     let pieceIndex = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(message.payload));
-                    let isEmpty = this.queue.length === 0;
-                    this.queue.enqueue(new TorrentPiece(pieceIndex));
-                    if (isEmpty) {
+                    let wasEmpty = this.queue.length === 0;
+                    this.queue.enqueue(new TorrentPiece(pieceIndex,
+                                    this.pieceManager.totalSize, 
+                                    this.pieceManager.maxPieceSize));
+                    if (wasEmpty) {
                         this.requestBlock();
                     }
                 }
@@ -91,23 +100,28 @@ export class Peer {
                     this.requestBlock();
                 }
                 else if (message.messageId === MessageType.Piece) {
-                    let buf = new Buffer();
-                    buf.write(message.payload);
-                    let index = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buf.read(4)));
-                    buf.clear(4);
-                    let begin = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buf.read(4)));
-                    buf.clear(4);
+                    // let buf = new BinaryBuffer();
+                    let buf = Buffer.from(message.payload);
+                    // buf.write(message.payload);
+                    console.log(buf);
+                    let index = buf.readUInt32BE(0);
+                    // let index = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buf.read(4)));
+                    // buf.clear(4);
+                    let begin = buf.readUInt32BE(4);
+                    // let begin = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buf.read(4)));
+                    // buf.clear(4);
+                    let fd = fs.openSync("test.mp4", "rs+");
+                    let start = index * this.pieceManager.maxPieceSize + begin;
+                      console.log(buf);
+                    // if (buf.length == 0)
+                        console.log("PIECE: ", index, begin, buf.length);
+                    
+                    fs.writeSync(fd, buf, 8, buf.length - 8, start)
 
-                    chrome.fileSystem.getWritableEntry(window["entry"], we => {
-                        (we as FileEntry).createWriter(wr => {
-                            wr.onerror = (e) => console.log(e);
-                            wr.seek(index * window["piece length"] + begin);
-                            wr.write(new Blob([buf.data ], {  type: 'application/octet-binary' } ));
-                            console.log("received piece: " + (index * window["piece length"] + begin));
-                        });
-                    });
-
+                    fs.closeSync(fd);
+                    
                     let blockIndex = Math.ceil(begin / Math.pow(2, 14));
+                    this.pieceManager.markRequsted(index, blockIndex)
                     this.pieceManager.markReceived(index, blockIndex);
 
                     if (this.pieceManager.isDone) {
@@ -122,6 +136,7 @@ export class Peer {
                     this.buffer.clear(message.data.byteLength);
                 }
             }
+            this.socket.send(new KeepAlive().data)
         }
     }
 
@@ -132,10 +147,10 @@ export class Peer {
         while (this.queue.length) {
             let block = this.queue.dequeue();
             if (this.pieceManager.isAvailable(block.pieceIndex, block.index)) {
+                console.log("BLOCK: ", block.pieceIndex, block.begin, block.length);
                 let data = new Request(block.pieceIndex, block.begin, block.length).data;
-                // console.log("REQUESTING BLOCK : " + new Uint8Array(data).join(","));
                 this.socket.send(data).then(() => {
-                    this.pieceManager.markRequsted(block.pieceIndex, block.index)
+                   
                 });
                 break;
             }

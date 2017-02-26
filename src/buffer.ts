@@ -1,4 +1,4 @@
-export class Buffer {
+export class BinaryBuffer {
     private _data: ArrayBuffer;
 
     constructor() {
@@ -8,7 +8,7 @@ export class Buffer {
     write (data: ArrayBuffer | Uint8Array) {
         // let concatenation = new Uint8Array(((this.data && this.data.byteLength) || 0) + data.byteLength);
         let left = new Uint8Array(this._data);
-        let right = new Uint8Array(data);
+        let right = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
         let concatenation = new Uint8Array(left.byteLength + right.byteLength);
         concatenation.set(left, 0);
         concatenation.set(right, left.length);

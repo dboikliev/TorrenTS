@@ -2,27 +2,27 @@ import { TorrentFile } from "./torrent";
 
 export class TorrentPiece {
 
-    private pieceIndex: number;
-    private blockSize: number;
+    private _pieceIndex: number;
+    private _blockSize: number;
+    private _torrentSize: number;
+    private _maxPieceLength: number;
 
-    constructor (pieceIndex: number, blockSize: number = Math.pow(2, 14)) {
-        this.pieceIndex = pieceIndex;
-        this.blockSize = blockSize;
+    constructor (pieceIndex: number, torrentSize: number, maxPieceLength: number, blockSize: number = Math.pow(2, 14)) {
+        this._torrentSize = torrentSize;
+        this._maxPieceLength = maxPieceLength;
+        this._pieceIndex = pieceIndex;
+        this._blockSize = blockSize;
     }
 
     public get blocks(): PieceBlock[] {
-        let lastPieceIndex = Math.ceil(window["torrent size"] / window["piece length"]) - 1;
-        let lastPieceLength = Math.ceil(window["torrent size"] % window["piece length"]);
-        let currentPieceLength = this.pieceIndex === lastPieceIndex ? lastPieceLength : window["piece length"];
-        let blocksCount = Math.ceil(window["piece length"] / this.blockSize);
+        let lastPieceIndex = Math.floor(this._torrentSize / this._maxPieceLength);
+        let lastPieceLength = this._torrentSize % this._maxPieceLength;
+        let currentPieceLength = this._pieceIndex === lastPieceIndex ? lastPieceLength : this._maxPieceLength;
+        let blocksCount = Math.ceil(currentPieceLength / this._blockSize);
         let blocks = [];
+        let blockSize = this._pieceIndex === lastPieceIndex ? currentPieceLength % this._blockSize : this._blockSize;
         for (let i = 0; i < blocksCount; i++) {
-            if (i === blocksCount - 1) {
-                blocks.push(new PieceBlock(this.pieceIndex, i * this.blockSize, currentPieceLength % this.blockSize));
-            }
-            else {
-                blocks.push(new PieceBlock(this.pieceIndex, i * this.blockSize, this.blockSize));
-            }
+            blocks.push(new PieceBlock(this._pieceIndex, i * this._blockSize, blockSize));
         }
         return blocks;
     }
@@ -49,70 +49,83 @@ export class PieceBlock {
 }
 
 export class PieceManager {
-    private piecesCount: number;
-    private requested: boolean[][];
-    private received: boolean[][];
-    private totalSize: number;
-    private maxPieceSize: number;
-    private blockSize: number = Math.pow(2, 14);
+    private _piecesCount: number;
+    private _requested: boolean[][];
+    private _received: boolean[][];
+    private _totalSize: number;
+    private _maxPieceSize: number;
+    private _blockSize: number = Math.pow(2, 14);
 
     constructor (torrent: TorrentFile) {
-        this.totalSize = torrent.size;
-        this.maxPieceSize = torrent.pieceLength;
-        this.piecesCount = Math.ceil(this.totalSize / this.maxPieceSize);
+        this._totalSize = torrent.size;
+        this._maxPieceSize = torrent.pieceLength;
+        this._piecesCount = Math.ceil(torrent.size / torrent.pieceLength);
 
-
-        this.requested = new Array(this.piecesCount);
-        for (let i = 0; i < this.requested.length; i++) {
-            if (!this.requested[i]) {
-                this.requested[i] = [];
+        this._requested = new Array(this._piecesCount);
+        for (let i = 0; i < this._requested.length; i++) {
+            if (!this._requested[i]) {
+                this._requested[i] = [];
             }
 
-            let currentPieceLength = i === this.piecesCount - 1 ? this.totalSize % this.maxPieceSize : this.maxPieceSize;
-            let blocksPerPiece = Math.ceil(this.maxPieceSize / this.blockSize);
-            if (i === this.piecesCount - 1) {
-                blocksPerPiece = Math.ceil(currentPieceLength / this.maxPieceSize);
+            let currentPieceLength = i === this._requested.length - 1 ? this._totalSize % this._maxPieceSize : this._maxPieceSize;
+            let blocksPerPiece;
+            if (i === this._requested.length - 1) {
+                blocksPerPiece = Math.ceil(currentPieceLength / this._maxPieceSize);
+            }
+            else {
+                blocksPerPiece = Math.ceil(this._maxPieceSize / this._blockSize);
             }
 
             for (let j = 0; j < blocksPerPiece; j++) {
-                this.requested[i].push(false);
+                this._requested[i].push(false);
             }
         }
 
-        // this.requested = this.requested.map((_, index) => new Array(Math.ceil(pieceSize / blockSize)));
-        // this.requested.forEach((row, rowInd) => row.forEach((_, colInd) => this.requested[rowInd][colInd] = false));
-
-        this.received = new Array(this.piecesCount);
-            for (let i = 0; i < this.received.length; i++) {
-            if (!this.received[i]) {
-                this.received[i] = [];
+        this._received = new Array(this._piecesCount);
+            for (let i = 0; i < this._received.length; i++) {
+            if (!this._received[i]) {
+                this._received[i] = [];
             }
 
-            let blocksPerPiece = Math.ceil(this.maxPieceSize / this.blockSize);
-            if (i === this.piecesCount - 1) {
-                blocksPerPiece = Math.ceil(this.totalSize % this.maxPieceSize);
+            let blocksPerPiece = Math.ceil(this._maxPieceSize / this._blockSize);
+            if (i === this._received.length - 1) {
+                blocksPerPiece = Math.ceil(this._totalSize % this._maxPieceSize);
             }
 
             for (let j = 0; j < blocksPerPiece; j++) {
-                this.received[i].push(false);
+                this._received[i].push(false);
             }
         }
     }
 
     public markRequsted(pieceIndex: number, blockIndex: number) {
-        this.requested[pieceIndex][blockIndex] = true;
+        this._requested[pieceIndex][blockIndex] = true;
     }
 
     public markReceived(pieceIndex: number, blockIndex: number) {
-        this.received[pieceIndex][blockIndex] = true;
+        this._received[pieceIndex][blockIndex] = true;
     }
 
     public isAvailable(pieceIndex: number, blockIndex: number): boolean {
-        return !this.requested[pieceIndex][blockIndex];
+        return !this._requested[pieceIndex][blockIndex];
+    }
+
+    public getPieceLength(index: number): number {
+        let lastPieceIndex = this._piecesCount - 1;
+        let lastPieceLength = index === lastPieceIndex ? this._totalSize % this._maxPieceSize : this._maxPieceSize
+        return lastPieceLength;
+    }
+
+    get maxPieceSize(): number {
+        return this._maxPieceSize;
+    }
+
+    get totalSize(): number {
+        return this._totalSize;
     }
 
     get isDone(): boolean {
-        return this.received.every(blocks => blocks.every(block => block));
+        return this._received.every(blocks => blocks.every(block => block));
     }
 }
 
