@@ -39,7 +39,7 @@ let request = http.get(requestUrl, function(res) {
                 let peerPort = torrentPeer["port"] && torrentPeer["port"].value;
 
                 let peer = new Peer(peerIp, peerPort, pieceManager);
-                peer.connect().then(p => p.sendHandshake(infoHash.toString()))
+                peer.connect().then(p => p.sendHandshake(infoHash.toString()));
             }
       });
 });

@@ -150,7 +150,7 @@ export class Peer {
                 console.log("BLOCK: ", block.pieceIndex, block.begin, block.length);
                 let data = new Request(block.pieceIndex, block.begin, block.length).data;
                 this.socket.send(data).then(() => {
-                   
+
                 });
                 break;
             }

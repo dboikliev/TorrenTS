@@ -621,9 +621,13 @@ export class MessageParser {
             return;
         }
 
-        let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4))) + 4;
+        let messageLength = ByteConverter.convertUint8ArrayToUint32(new Uint8Array(buffer.read(4)));
+        if (messageLength === 0) {
+            return parsers[MessageType.KeepAlive](buffer.read(messageLength));
+        }
+
         let messageId = buffer.elementAt(4);
-        let messageData = buffer.read(messageLength);
+        let messageData = buffer.read(messageLength + 4);
         let message = parsers[messageId](messageData);
         return message;
     }
