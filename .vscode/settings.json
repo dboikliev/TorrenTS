@@ -7,7 +7,6 @@
         "**/*.js" : { "when" : "$(basename).ts" },
         "**/*.js.map" : true,
         "node_modules" : true,
-        ".vscode" : true,
         "_reports": true,
         "karma.ps1": true,
         // ".gitignore": true,

@@ -20,7 +20,7 @@ export class TorrentFile {
             }
             parser = new BencodedParser(content);
         }
-        else if(typeof buffer === "string") {
+        else if (typeof buffer === "string") {
             parser = new BencodedParser(buffer);
         }
         this.dictionary = parser.parse() as BencodedDictionary;
@@ -73,7 +73,6 @@ export class TorrentFile {
             return this.info.value["length"].value;
         }
     }
-
 
     computeInfoHash(): string {
         return CryptoJS.SHA1(CryptoJS.enc.Latin1.parse(this.info.encode())).toString();
