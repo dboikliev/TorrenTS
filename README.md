@@ -1,5 +1,5 @@
 # TorrenTS
-Torrent client implemented in Typescript and NodeJS
+Torrent client implemented in TypeScript and NodeJS
 
 #### Run:
 ```code
