@@ -12,6 +12,5 @@
         // ".gitignore": true,
         "debug.log": true,
         "reports": true
-    },
-    "vsicons.presets.angular": false
+    }
 }
