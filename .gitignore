@@ -10,3 +10,4 @@ debug.log
 *.torrent
 *.txt
 settings.json
+npm-debug.log

@@ -65,17 +65,20 @@ export class TorrentFile {
     get size(): number {
         let files = this.info.value["files"];
         if (files) {
-            return (files.value as any)
-                .map(item => (item.value as any).length.value)
+            return files.value
+                .map(item => item.value.length.value)
                 .reduce((prev, cur) => prev + cur);
         }
-        else {
-            return this.info.value["length"].value;
-        }
+        
+        return this.info.value["length"].value;
     }
 
     computeInfoHash(): string {
-        return CryptoJS.SHA1(CryptoJS.enc.Latin1.parse(this.info.encode())).toString();
+        let encoded = this.info.encode();
+        let latin1 = CryptoJS.enc.Latin1.parse(encoded);
+        let sha1 = CryptoJS.SHA1(latin1).toString();
+        
+        return sha1;
     }
 
     computeUrlEncodedInfoHash(): string {
