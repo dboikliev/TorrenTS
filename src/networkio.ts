@@ -59,7 +59,7 @@ export class Socket {
         let buffer = Buffer.from(data);
         let promise = new Promise<Socket>((resolve, reject) => {
             this._socket.write(buffer, (err) => {
-                    resolve(this);
+                resolve(this);
             });
         });
         return promise;
